@@ -13,7 +13,7 @@ class DataSource:
 
          req = urllib2.Request(url, headers=headers)
          content = urllib2.urlopen(req).read()
-         self.content = BeautifulSoup(content, from_encoding='GB18030')
+         self.content = BeautifulSoup(content,  "html.parser")
          return  self.content
 		 
 class Parser:

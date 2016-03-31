@@ -55,5 +55,5 @@ if __name__ == "__main__":
 	timestr = time.strftime("%Y%m%d%H%M%S", time.localtime())
 	stockfile = "data/stock-" + timestr + ".txt"
 	stocklist = "data/stocklist-" + timestr + ".txt"
-	#get_stocklist(filename)
-	get_stockdata("data/stock-20160313212542.txt", stockfile)
+	get_stocklist(stocklist)
+	#get_stockdata("data/stock-20160313212542.txt", stockfile)
