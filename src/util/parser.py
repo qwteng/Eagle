@@ -4,7 +4,9 @@ __author__ = 'qwteng'
 import urllib2
 from bs4 import BeautifulSoup
 import re
-
+import sys
+reload(sys)
+sys.setdefaultencoding( "utf-8" )
 class DataSource:
     def crawl(self, url):
          headers = {
@@ -13,8 +15,11 @@ class DataSource:
 
          req = urllib2.Request(url, headers=headers)
          content = urllib2.urlopen(req).read()
-         self.content = BeautifulSoup(content,  "html.parser")
-         return  self.content
+         
+         self.content = BeautifulSoup(content, 'lxml', from_encoding="utf-8")
+        
+         return self.content
+        
 		 
 class Parser:
     def parse(self, content):
@@ -32,10 +37,9 @@ class SockListParser(Parser):
                 stock_map = {}
                 code = stock_string[-7:-1]
                 name = stock_string[0:-8]
-                href = stock['href']
+                #href = stock['href']
                 stock_map['code']  = code
                 stock_map['name'] = name
-                stock_map['url'] = href
                 self.list.append(stock_map)
 
         return self.list
@@ -48,7 +52,9 @@ class StockF10ReqParser(Parser):
 
         for table in tables:
             spans = table.find_all('span')
+
             if spans:
+
                 for i in range(len(spans)):
                     tag = spans[i].string
                     if tag == u'基本每股收益(元)':
@@ -67,19 +73,23 @@ class StockF10HolderParser(Parser):
         holders_map = {}
         for div in divs:
             div_name = div.find('div', 'name')
+           
             if div_name.strong.string != u'十大流通股东':
                 continue
 
             holder_type = div_name.strong.string
             div_content = div.find('div', 'content')
+            
             if div_content is None:
                 continue
 
             div_tab = div_content.find('div', 'tab')
+          
             if div_tab is None:
                 continue
 
             span_dates = div_tab.find_all('span')
+          
             dates = []
             for span in span_dates:
                 dates.append(span.string)
@@ -113,7 +123,8 @@ class StockF10HolderParser(Parser):
                     holders.append(holder)
 
 
-        holders_map[holder_type] = holders
+        if holders is not None:
+            holders_map[holder_type] = holders
 
         return holders_map
 
@@ -137,6 +148,7 @@ class Stock:
             sr_url = Stock.ShareholderResearch_url + 'sz' + code
 
         or_content = self.datasource.crawl(or_url)
+        
         stock.update(self.or_parser.parse(or_content))
 
         sr_content = self.datasource.crawl(sr_url)

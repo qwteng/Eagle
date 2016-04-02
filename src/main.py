@@ -1,59 +1,55 @@
 # coding=utf-8
 
-from parser.parser import *
+
 import sys
 import time
+from pymongo import MongoClient
+from util.parser import *
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
 
-def get_stocklist(filename):
+
+def get_stocklist():
 	url_stocklist = 'http://quote.eastmoney.com/stocklist.html'
 	dt = DataSource()
 	list_parser = SockListParser()
 	content = dt.crawl(url_stocklist)
 	stock_list = list_parser.parse(content)
 	
-	f = open(filename,'w')
-	for stock in stock_list:
-		f.write(str(stock)+"\n")
+	return stock_list
 	
-	f.close()
+def get_stockdata(stockcode):
 	
-def get_stockdata(stocklist, stockdata):
-	f_list = open(stocklist, 'r')
-	stock_list = f_list.readlines()
+	if stockcode[0] not in '036':
+		return None
+	
 	stock = Stock()
-	f_list.close()
-	print(len(stock_list))
 
-	f  = open(stockdata, 'w')
-
-	for stockstr in stock_list:
-		print(stockstr)
-		s = eval(stockstr)
-		code = s['code']
-		print code
-		
-		if code[0] not in '036':
-			continue
-		print code    
-		try:
-			stock_data = stock.parse(code)
-			#stock_data.update(s)
-			print(type(stock_data))
-			for i in stock_data.keys() :
-				print(i)
-			f.write(str(stock_data) + "\n")
-		except:
-			continue
-
-	f.close()
+	stock_data = None
+	try:
+		stock_data = stock.parse(code)
+	except:
+		pass
+	
+	return stock_data
 
 if __name__ == "__main__":
 	timestr = time.strftime("%Y%m%d%H%M%S", time.localtime())
-	stockfile = "data/stock-" + timestr + ".txt"
-	stocklist = "data/stocklist-" + timestr + ".txt"
-	get_stocklist(stocklist)
-	#get_stockdata("data/stock-20160313212542.txt", stockfile)
+	client = MongoClient()
+	stockdb = client['stock']
+	collection = stockdb['stockinfo']
+	
+	list = get_stocklist()
+	collection.insert(list)
+	
+	stock = Stock()
+
+	st_list = collection.find()
+	for st in st_list:
+		if not st.has_key('code'):
+			continue
+		code = st['code']
+		stock_info = stock.parse('600106')
+		collection.update({'code':code}, stock_info)
