@@ -47,6 +47,10 @@ class SockListParser(Parser):
 class StockF10ReqParser(Parser):
     def __init__(self):
         self.data = {}
+        self.data['earnings'] = ''
+        self.data['net'] = ''
+        self.data['cash'] = ''
+        
     def parse(self, content):
         tables = content.find_all('table')
 
@@ -71,6 +75,7 @@ class StockF10HolderParser(Parser):
     def parse(self, content):
         divs = content.find_all('div', "section")
         holders_map = {}
+        holders = []
         for div in divs:
             div_name = div.find('div', 'name')
            
@@ -97,8 +102,6 @@ class StockF10HolderParser(Parser):
             div_tables = div_content.find('div', 'content')
             if div_tables is None:
                 continue
-
-            holders = []
 
             tables = div_tables.find_all('table')
             for i in range(0, len(dates)):
@@ -147,8 +150,8 @@ class Stock:
             or_url = Stock.OperationsRequired_url + 'sz' + code
             sr_url = Stock.ShareholderResearch_url + 'sz' + code
 
+        stock['code'] = code
         or_content = self.datasource.crawl(or_url)
-        
         stock.update(self.or_parser.parse(or_content))
 
         sr_content = self.datasource.crawl(sr_url)
