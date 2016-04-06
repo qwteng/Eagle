@@ -50,6 +50,8 @@ def get_holders(stockdata):
 		h = {}
 		h.update(basic)
 		h.update(holder)
+		md5 = utils.md5(str(h))
+		h['md5'] = md5
 		rslt.append(h)
 	return rslt
 
@@ -64,13 +66,22 @@ if __name__ == "__main__":
 	
 	stock = Stock()
 	st_list = c_stockinfo.find()
-	print st_list
 	for st in st_list:
 		if not st.has_key('code'):
 			continue
 		code = st['code']
-		stock_info = stock.parse(code)
+		print code
+		try:
+			stock_info = stock.parse(code)
+		except:
+			continue
+
 		c_stockinfo.update({'code':code}, {"$set":stock_info})
-		holders = get_holders(stock_info)
-		if holders is not None and len(holders) != 0:
-			c_holders.insert(holders)
+		try:
+			holders = get_holders(stock_info)
+		except:
+			continue
+		for h in holders:
+			r = c_holders.find_one({'md5':h['md5']})
+			if r is None:
+				c_holders.insert(h)
