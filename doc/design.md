@@ -6,17 +6,8 @@
 
 ## 数据处理流程
 
-```flow
-st=>start: start
-e=>end
-op=>operatioin: My Op1
-op1=>operatioin: My Op2
-cond=>condition: Yes or No?
-
-st->op->cond
-st->op1
-cond(yes)->e
-cond(no)->op
+```
+爬虫抓取网页数据 -> json格式写入到文件中 -> 从文件导入到数据库中 -> 数据分析 -> 数据展示 
 ```
 
 ## 数据结构设计
