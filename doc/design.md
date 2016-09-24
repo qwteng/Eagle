@@ -1,20 +1,18 @@
 # 设计文档
 
-## mongodb数据库设计
-### stockholder结构
+## 数据结构设计
+### stockholder数据结构定义
 ```json
 {
-    _id:,
     code:,
     name:,
-    holders:[
+    holder:
         {
             date:,
             holdername:,
+            number:,
             rate:,
             change:
-        },
-        ...
-    ]
+        }
 }
 ```
