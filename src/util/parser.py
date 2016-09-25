@@ -138,6 +138,11 @@ class Stock:
         self.datasource = DataSource()
         self.or_parser = StockF10ReqParser()
         self.sr_parser = StockF10HolderParser()
+    def parse(self, code, name):
+        stock = parse(code)
+        stock['name'] = name
+        return stock
+        
     def parse(self,code):
         stock = {}
         if code is None or len(code) != 6:
