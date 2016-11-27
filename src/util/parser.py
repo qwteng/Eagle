@@ -3,7 +3,9 @@ __author__ = 'qwteng'
 
 import urllib2
 from bs4 import BeautifulSoup
+from model.datamodel import *
 import re
+import arrow
 import sys
 reload(sys)
 sys.setdefaultencoding( "utf-8" )
@@ -12,37 +14,14 @@ class DataSource:
          headers = {
              'User-Agent':'Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.1.6) Gecko/20091201 Firefox/3.5.6'
          }
-
          req = urllib2.Request(url, headers=headers)
          content = urllib2.urlopen(req).read()
-         
          self.content = BeautifulSoup(content, 'lxml', from_encoding="utf-8")
-        
          return self.content
-        
-		 
+
 class Parser:
     def parse(self, content):
         return None
-
-class SockListParser(Parser):
-    def __init__(self):
-        self.list = []
-    def parse(self, content):
-        stock_list = content.find_all('a', target="_blank")
-        pattern = re.compile(r'.*\d{6}.', re.UNICODE)
-        for stock in stock_list:
-            stock_string = stock.string
-            if stock_string and pattern.match(stock_string):
-                stock_map = {}
-                code = stock_string[-7:-1]
-                name = stock_string[0:-8]
-                #href = stock['href']
-                stock_map['code']  = code
-                stock_map['name'] = name
-                self.list.append(stock_map)
-
-        return self.list
 
 class StockF10ReqParser(Parser):
     def __init__(self):
@@ -53,12 +32,9 @@ class StockF10ReqParser(Parser):
         
     def parse(self, content):
         tables = content.find_all('table')
-
         for table in tables:
             spans = table.find_all('span')
-
             if spans:
-
                 for i in range(len(spans)):
                     tag = spans[i].string
                     if tag == u'基本每股收益(元)':
@@ -72,94 +48,141 @@ class StockF10ReqParser(Parser):
 class StockF10HolderParser(Parser):
     def __init__(self):
         self.data = {}
-    def parse(self, content):
-        divs = content.find_all('div', "section")
+    def pasre_holders_sum(self, table):
+        top10holderlist = []
+        dateList = []
+        descList = []
+        rateList = []
+        if table is None:
+            return None
+        trs = table.find_all('tr')
+        for tr in trs:
+            th0 = tr.find('th')
+            if th0.string is None:
+                ths = tr.find_all('th', attrs={"class": "tips-dataL"})
+                for th in ths:
+                    dateList.append(arrow.get(th.string,'YY-MM-DD').format('YYYY-MM-DD'))
+            if th0.string == u'筹码集中度' :
+                tds = tr.find_all('td',  attrs={"class": "tips-dataL"})
+                for td in tds:
+                    descList.append(td.string)
+            if th0.string == unicode('前十大流通股东持股合计(%)'):
+                tds = tr.find_all('td', attrs={"class": "tips-dataL"})
+                for td in tds:
+                    rateList.append(td.string)
+        for i in range(0, len(dateList)):
+            s = StockTop10Holders()
+            s.date = dateList[i]
+            s.top10desc = descList[i]
+            s.top10rate = rateList[i]
+            top10holderlist.append(s)
+        return top10holderlist
+
+
+    def parse_holders(self, divs):
+        holderList = []
+        if divs is None:
+            return None
         holders_map = {}
         holders = []
         for div in divs:
             div_name = div.find('div', 'name')
-           
             if div_name.strong.string != u'十大流通股东':
                 continue
-
             holder_type = div_name.strong.string
             div_content = div.find('div', 'content')
             
             if div_content is None:
                 continue
-
             div_tab = div_content.find('div', 'tab')
-          
+
             if div_tab is None:
                 continue
-
             span_dates = div_tab.find_all('span')
-          
             dates = []
             for span in span_dates:
                 dates.append(span.string)
-
             div_tables = div_content.find('div', 'content')
             if div_tables is None:
                 continue
-
             tables = div_tables.find_all('table')
             for i in range(0, len(dates)):
                 table = tables[i]
                 date = dates[i]
                 trs = table.find_all('tr')
-
                 for tr in trs:
                     holder = {}
                     tds = tr.find_all('td')
                     if len(tds) < 6:
                         continue
                     name = tds[0].string
-                    account = tds[3].string
+                    number = tds[3].string
                     rate = tds[4].string
                     change = tds[5].string
-                    holder['name'] = name
-                    holder['account'] = account
-                    holder['rate'] = rate
-                    holder['change'] = change
-                    holder['date'] = date
-                    holders.append(holder)
+                    h = StockHolder()
+                    h.date = date
+                    h.holdername = name
+                    h.number = number
+                    h.rate = rate
+                    holderList.append(h)
+        return holderList
 
+    def parse(self, content):
+        div_top10 = content.find(id="Table0")
+        if div_top10 is None:
+            return None
+        top10holderList = self.pasre_holders_sum(div_top10)
 
-        if holders is not None:
-            holders_map[holder_type] = holders
+        divs = content.find_all('div', "section")
+        if divs is None:
+            return None
+        holders = self.parse_holders(divs)
 
-        return holders_map
+        if top10holderList is None:
+            return None
+        if holders is None:
+            return None
+        for top10holder in top10holderList:
+            date = top10holder.date
+            for holder in holders:
+                if holder.date == date :
+                    top10holder.holders.append(holder)
 
-class Stock:
+        return top10holderList
+
+class StockInfo:
     OperationsRequired_url = 'http://f10.eastmoney.com/f10_v2/OperationsRequired.aspx?code='
     ShareholderResearch_url = 'http://f10.eastmoney.com/f10_v2/ShareholderResearch.aspx?code='
     def __init__(self):
         self.datasource = DataSource()
         self.or_parser = StockF10ReqParser()
         self.sr_parser = StockF10HolderParser()
-    def parse(self, code, name):
-        stock = parse(code)
-        stock['name'] = name
-        return stock
-        
-    def parse(self,code):
+
+    def parse(self,code,name):
         stock = {}
         if code is None or len(code) != 6:
             return stock
 
         if code[0] == '6':
-            or_url = Stock.OperationsRequired_url + 'sh' + code
-            sr_url = Stock.ShareholderResearch_url + 'sh' + code
+            or_url = StockInfo.OperationsRequired_url + 'sh' + code
+            sr_url = StockInfo.ShareholderResearch_url + 'sh' + code
         else:
-            or_url = Stock.OperationsRequired_url + 'sz' + code
-            sr_url = Stock.ShareholderResearch_url + 'sz' + code
+            or_url = StockInfo.OperationsRequired_url + 'sz' + code
+            sr_url = StockInfo.ShareholderResearch_url + 'sz' + code
 
         stock['code'] = code
         or_content = self.datasource.crawl(or_url)
         stock.update(self.or_parser.parse(or_content))
 
         sr_content = self.datasource.crawl(sr_url)
-        stock.update(self.sr_parser.parse(sr_content))
+        top10holderList = self.sr_parser.parse(sr_content)
+        if top10holderList is None:
+            return None
+        for top10holder in top10holderList:
+            top10holder.code = code
+            top10holder.name = name
+            for holder in top10holder.holders:
+                holder.code = code
+                holder.name = name
 
-        return stock
+        return top10holderList
