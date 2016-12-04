@@ -116,12 +116,14 @@ class StockF10HolderParser(Parser):
                     if len(tds) < 6:
                         continue
                     name = tds[0].string
+                    type = tds[1].string
                     number = tds[3].string
                     rate = tds[4].string
                     change = tds[5].string
                     h = StockHolder()
                     h.date = date
                     h.holdername = name
+                    h.type = type
                     h.number = number
                     h.rate = rate
                     holderList.append(h)

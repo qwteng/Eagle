@@ -31,4 +31,4 @@ def get_top10holder_to_file(filename):
 
     output.close();
 
-get_top10holder_to_file("b.txt")
+get_top10holder_to_file("c.txt")

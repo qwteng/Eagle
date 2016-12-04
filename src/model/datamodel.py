@@ -21,6 +21,7 @@ class StockHolder:
     def __init__(self):
         self.code=""
         self.name=""
+        self.type=""
         self.date=""
         self.holdername=""
         self.number=""
@@ -30,6 +31,7 @@ class StockHolder:
         map = {}
         map['code'] = self.code
         map['name'] = self.name
+        map['type'] = self.type
         map['date'] = self.date
         map['holdername'] = self.holdername
         map['number'] = self.number
